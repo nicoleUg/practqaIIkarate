@@ -12,6 +12,7 @@ class ExamplesTest {
         Results results = Runner.path("classpath:examples")
                 //.outputCucumberJson(true)
                 .parallel(5);
+        assertTrue(results.getScenariosTotal() > 0, "No se ejecutaron escenarios Karate; revisar rutas y etiquetas.");
         assertEquals(0, results.getFailCount(), results.getErrorMessages());
     }
 

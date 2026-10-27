@@ -1,5 +1,6 @@
 pipeline {
     agent any
+    options { skipDefaultCheckout(true); disableConcurrentBuilds(); timeout(time: 15, unit: 'MINUTES') }
 
     tools {
         maven 'Maven' // Nombre del Maven configurado en Jenkins
@@ -11,20 +12,26 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Clonando el repositorio...'
-                git branch: 'main', url: 'https://github.com/nicoleUg/practqaIIkarate.git'
+                checkout scm
             }
         }
 
         stage('Build & Test') {
             steps {
                 echo 'Ejecutando pruebas Karate...'
-                bat 'mvn test -Dkarate.options="--tags @Smock"'
+                bat 'mvn -B -ntp clean test'
             }
         }
 
-        stage('Publicar Reporte') {
-            steps {
-                echo 'Publicando reporte HTML de Karate...'
+    }
+
+    post {
+        always {
+            script {
+                if (fileExists('target/surefire-reports')) {
+                    junit testResults: 'target/surefire-reports/TEST-*.xml', skipPublishingChecks: true
+                }
+                if (fileExists('target/karate-reports/karate-summary.html')) {
                 publishHTML([
                     allowMissing: false,
                     alwaysLinkToLastBuild: true,
@@ -33,12 +40,11 @@ pipeline {
                     reportFiles: 'karate-summary.html',
                     reportName: 'Reporte de Pruebas Karate'
                 ])
+                archiveArtifacts artifacts: 'target/karate-reports/**', allowEmptyArchive: false
+                }
             }
         }
-    }
-
-    post {
-        always {
+        cleanup {
             echo 'Pipeline finalizado — limpiando workspace.'
             cleanWs()
         }
